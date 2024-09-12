@@ -1,48 +1,85 @@
-// Hello World!
-console.log("Hello World!")
+const { select, input, checkbox } = require('@inquirer/prompts')
 
-
-// variables - let
-let messages = "Hello World!"
-
-
-// variables - const
-const menssage = "Hello, me"
-{
-    const menssage = "Hello, Douglas!"
-    console.log(menssage)
+let goal = {
+  value: 'Tomar 3L de água por dia',
+  checked: false,
 }
-console.log(menssage);
 
+let goals = [ goal ]
 
-// arrays
-let goals00 = ['Douglas', 'hello']
-let goals01 = [2, 'Douglas']
-// concatenate values
-console.log(goals00[1] + ", " + goals00[0]) 
+const createGoal = async () => {
+  const goal = await input({ message: "Digite a meta:"})
 
-let goals02 = [
-    goals01,
-    {
-        value: 'caminhar 20 minutos todos os dias',
-        checked: false
-    }
-]
-console.log(goals02[1].value);
+  if(goal.length == 0) {
+    console.log('A meta não pode ser vazia.')
+    return
+  }
 
-// objects
-let goals = {
-    value: 'ler um livro por mês',
-    address: 2,
-    checked: true,
-    isChecked: () => {
-        console.log(info)
-    }
+  goals.push(
+    { value: goal, checked: false }
+  )
 }
-console.log(goals.value);
 
-// function // arrow function
-const createGoal = () => {}
+const listGoals = async () => {
+  const responses = await checkbox({
+    message: "Use as setas para mudar de meta, o espaço para marcar ou desmarcar e o Enter para finalizar essa etapa",
+    choices: [...goals],
+    instructions: false,
+  })
 
-// named function
-function createGoals() {}
+  if(responses.length == 0) {
+    console.log("Nenhuma meta selecionada!")
+    return
+  }
+
+  goals.forEach((m) => {
+    m.checked = false
+  })
+
+  responses.forEach((resposta) => {
+    const goal = goals.find((m) => {
+      return m.value == resposta
+    })
+
+    goal.checked = true
+  })
+
+  console.log('Meta(s) marcadas como concluída(s)')
+}
+
+const start = async () => {
+  while(true){ 
+    const opcao = await select({
+      message: "Menu >",
+      choices: [
+        {
+          name: "Cadastrar meta",
+          value: "cadastrar"
+        },
+        {
+          name: "Listar metas",
+          value: "listar"
+        },
+        {
+          name: "Sair",
+          value: "sair"
+        }
+      ]
+    })
+
+    switch(opcao) {
+      case "cadastrar":
+        await createGoal()
+        console.log(goals)
+        break
+      case "listar":
+        await listGoals()
+        break
+      case "sair":
+        console.log('Até a próxima!')
+        return
+    }
+  }
+}
+
+start();
