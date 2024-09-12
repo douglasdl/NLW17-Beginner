@@ -49,7 +49,7 @@ const listGoals = async () => {
 
 const start = async () => {
   while(true){ 
-    const opcao = await select({
+    const option = await select({
       message: "Menu >",
       choices: [
         {
@@ -67,7 +67,7 @@ const start = async () => {
       ]
     })
 
-    switch(opcao) {
+    switch(option) {
       case "cadastrar":
         await createGoal()
         console.log(goals)
