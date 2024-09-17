@@ -1,83 +1,208 @@
 const { select, input, checkbox } = require('@inquirer/prompts')
+const fs = require("fs").promises
 
-let goal = {
-  value: 'Tomar 3L de água por dia',
-  checked: false,
+let message = "Bem vindo ao App de Metas";
+
+let goals
+
+const loadGoals = async () => {
+  try {
+    const data = await fs.readFile("goals.json", "utf-8")
+    goals = JSON.parse(data)
+  }
+  catch (erro) {
+    goals = []
+  }
 }
 
-let goals = [ goal ]
+const saveGoals = async () => {
+  await fs.writeFile("goals.json", JSON.stringify(goals, null, 2))
+}
 
 const createGoal = async () => {
-  const goal = await input({ message: "Digite a meta:"})
+  const goal = await input({ message: "Digite a meta:" })
 
-  if(goal.length == 0) {
-    console.log('A meta não pode ser vazia.')
+  if (goal.length == 0) {
+    message = 'A meta não pode ser vazia.'
     return
   }
 
   goals.push(
     { value: goal, checked: false }
   )
+  message = "Meta cadastrada com sucesso!"
 }
 
 const listGoals = async () => {
-  const responses = await checkbox({
+  if (goals.length == 0) {
+    message = "Não existem metas!"
+    return
+  }
+
+  const answers = await checkbox({
     message: "Use as setas para mudar de meta, o espaço para marcar ou desmarcar e o Enter para finalizar essa etapa",
     choices: [...goals],
     instructions: false,
   })
 
-  if(responses.length == 0) {
-    console.log("Nenhuma meta selecionada!")
-    return
-  }
-
   goals.forEach((m) => {
     m.checked = false
   })
 
-  responses.forEach((resposta) => {
+  if (answers.length == 0) {
+    message = "Nenhuma meta selecionada!"
+    return
+  }
+
+  answers.forEach((answer) => {
     const goal = goals.find((m) => {
-      return m.value == resposta
+      return m.value == answer
     })
 
-    goal.checked = true
+    goals.checked = true
   })
 
-  console.log('Meta(s) marcadas como concluída(s)')
+  message = 'Meta(s) marcada(s) como concluída(s)'
+}
+
+const completedGoals = async () => {
+  if (goals.length == 0) {
+    message = "Não existem metas!"
+    return
+  }
+
+  const completed = goals.filter((goal) => {
+    return goal.checked
+  })
+
+  if (completed.length == 0) {
+    message = 'Não existem metas realizadas! :('
+    return
+  }
+
+  await select({
+      message: "Metas Realizadas: " + completed.length,
+      choices: [...completed]
+  })
+}
+
+const openedGoals = async () => {
+  if (goals.length == 0) {
+    message = "Não existem metas!"
+    return
+  }
+
+  const opened = goals.filter((goal) => {
+      return goal.checked != true
+  })
+
+  if (opened.length == 0) {
+    message = 'Não existem metas abertas! :)'
+    return
+  }
+
+  await select({
+    message: "Metas Abertas: " + opened.length,
+    choices: [...opened]
+  })
+}
+
+const deleteGoals = async () => {
+  if(goals.length == 0) {
+    message = "Não existem metas!"
+    return
+  }
+
+  const uncheckedGoals = goals.map((goal) => {
+    return { value: goal.value, checked: false }
+  })
+
+  const itemsToDelete = await checkbox({
+    message: "Selecione item para deletar",
+    choices: [...uncheckedGoals],
+    instructions: false,
+  })
+
+  if (itemsToDelete.length == 0) {
+    message = "Nenhum item para deletar!"
+    return
+  }
+
+  itemsToDelete.forEach((item) => {
+    goals = goals.filter((goal) => {
+      return goal.value != item
+    })
+  })
+
+  message = "Meta(s) deleta(s) com sucesso!"
+}
+
+const showMessage = () => {
+  console.clear();
+
+  if (message != "") {
+    console.log(message)
+    console.log("")
+    message = ""
+  }
 }
 
 const start = async () => {
-  while(true){ 
+  await loadGoals()
+
+  while (true) {
+    showMessage()
+    await saveGoals()
+
     const option = await select({
-      message: "Menu >",
-      choices: [
-        {
-          name: "Cadastrar meta",
-          value: "cadastrar"
-        },
-        {
-          name: "Listar metas",
-          value: "listar"
-        },
-        {
-          name: "Sair",
-          value: "sair"
-        }
-      ]
+        message: "Menu >",
+        choices: [
+            {
+                name: "Cadastrar meta",
+                value: "cadastrar"
+            },
+            {
+                name: "Listar metas",
+                value: "listar"
+            },
+            {
+                name: "Metas realizadas",
+                value: "realizadas"
+            },
+            {
+                name: "Metas abertas",
+                value: "abertas"
+            },
+            {
+                name: "Deletar metas",
+                value: "deletar"
+            },
+            {
+                name: "Sair",
+                value: "sair"
+            }
+        ]
     })
 
-    switch(option) {
-      case "cadastrar":
-        await createGoal()
-        console.log(goals)
-        break
-      case "listar":
-        await listGoals()
-        break
-      case "sair":
-        console.log('Até a próxima!')
-        return
+    switch (option) {
+        case "cadastrar":
+            await createGoal()
+            break
+        case "listar":
+            await listGoals()
+            break
+        case "realizadas":
+            await completedGoals()
+            break
+        case "abertas":
+            await openedGoals()
+            break
+        case "deletar":
+            await deleteGoals()
+            break
+        case "sair":
+            console.log('Até a próxima!')
+            return
     }
   }
 }
